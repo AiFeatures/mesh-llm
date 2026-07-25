@@ -520,6 +520,18 @@ pub(super) async fn pick_model_assignment(
     None
 }
 
+/// Pick a model assignment only when this node's mesh role can serve models.
+pub(super) async fn pick_model_assignment_for_role(
+    node: &mesh::Node,
+    local_models: &[String],
+) -> Option<String> {
+    if matches!(node.role().await, NodeRole::Client) {
+        None
+    } else {
+        pick_model_assignment(node, local_models).await
+    }
+}
+
 /// Check if a standby node should promote to serve a model.
 /// Uses demand signals — promotes for unserved models with active demand,
 /// or for demand-based rebalancing when one model is much hotter than others.
@@ -1079,7 +1091,7 @@ pub(super) async fn select_run_auto_model_path(
     });
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
-    let assignment = pick_model_assignment(ctx.node, ctx.local_models).await;
+    let assignment = pick_model_assignment_for_role(ctx.node, ctx.local_models).await;
     let assignment = if assignment.is_none()
         && (ctx.options.auto || ctx.options.discover.is_some())
         && !ctx.is_client
